@@ -14,6 +14,12 @@ capnp compile --src-prefix=extra -ojava:src/main/java/fugue/serialise extra/fugu
 GHIDRA_INSTALL_DIR=/opt/ghidra/ gradle buildExtension
 ```
 
+## Install
+
+```
+unzip -q -o -d "${GHIDRA_INSTALL_DIR}"/Ghidra/Extensions/ dist/$(ls -1t dist | head -n1)
+```
+
 ## Debug
 
 ```
