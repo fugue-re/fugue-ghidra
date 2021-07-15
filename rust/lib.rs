@@ -260,6 +260,8 @@ impl Backend for Ghidra {
             Imported::File(tmp)
         };
 
+        println!("{:?}", process);
+
         match process
             .output()
             .map_err(Error::Launch)
@@ -280,7 +282,8 @@ mod test {
 
     #[test]
     fn test_clean_import() -> Result<(), ExportError> {
-        let ghidra = Ghidra::new()?;
+        let ghidra = Ghidra::new()?
+            .export_path("/tmp/exported.fdb", true);
         let url = Url::parse("file:///usr/bin/ls").unwrap();
 
         let _ = ghidra.import(&url)?;

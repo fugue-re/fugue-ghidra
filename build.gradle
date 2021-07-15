@@ -47,6 +47,10 @@ else {
 //----------------------END "DO NOT MODIFY" SECTION-------------------------------
 jar {
     from {
-        configurations.extraLibs.collect { it.isDirectory() ? it : zipTree(it) }
+        configurations.extraLibs.collect {
+          exclude "META-INF/*"
+
+          it.isDirectory() ? it : zipTree(it)
+        }
     }
 }

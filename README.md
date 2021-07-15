@@ -17,5 +17,5 @@ GHIDRA_INSTALL_DIR=/opt/ghidra/ gradle buildExtension
 ## Debug
 
 ```
-capnp convert packed:text extra/fugue_db.capnp Project < /tmp/output.fdb | less
+capnp convert packed:text extra/fugue_db.capnp Database < /tmp/output.fdb | less
 ```
