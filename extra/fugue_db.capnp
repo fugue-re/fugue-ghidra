@@ -2,7 +2,7 @@
 
 using Java = import "/capnp/java.capnp";
 $Java.package("fugue.serialise");
-$Java.outerClassname("Database");
+$Java.outerClassname("DatabaseImpl");
 
 struct Architecture { # format follows Ghidra's ldefs
   processor @0 :Text;

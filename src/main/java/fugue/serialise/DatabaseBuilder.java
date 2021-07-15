@@ -1,4 +1,4 @@
-package niobe.serialise;
+package fugue.serialise;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -35,12 +35,12 @@ import ghidra.program.model.address.*;
 import ghidra.util.task.TaskMonitor;
 import ghidra.util.exception.CancelledException;
 
-import niobe.serialise.Database.Project;
-import niobe.serialise.ArchBuilder;
+import fugue.serialise.DatabaseImpl.Database;
+import fugue.serialise.ArchBuilder;
 
 public class DatabaseBuilder {
     private org.capnproto.MessageBuilder message;
-    private Project.Builder projectBuilder;
+    private Database.Builder databaseBuilder;
 
     private LinkedHashMap<ArchBuilder, Integer> arches;
     private HashMap<Long, Integer> functionMap;
@@ -55,7 +55,7 @@ public class DatabaseBuilder {
       this.monitor = monitor;
 
       message = new org.capnproto.MessageBuilder();
-      projectBuilder = message.initRoot(Project.factory);
+      databaseBuilder = message.initRoot(Database.factory);
 
       arches = new LinkedHashMap<>();
       functionMap = new HashMap<>();
@@ -67,7 +67,7 @@ public class DatabaseBuilder {
 
     private void makeExportInfo() {
       var meta = currentProgram.getMetadata();
-      var exportInfo = projectBuilder.getExportInfo();
+      var exportInfo = databaseBuilder.getExportInfo();
 
       exportInfo.setInputPath(meta.get("Executable Location"));
 
@@ -91,9 +91,9 @@ public class DatabaseBuilder {
     }
 
     private void makeArchitectures() {
-      var architectures = projectBuilder.initArchitectures(arches.size());
+      var architectures = databaseBuilder.initArchitectures(arches.size());
       arches.forEach((arch, i) -> {
-        architectures.get(i).setName(arch.name);
+        architectures.get(i).setProcessor(arch.processor);
         architectures.get(i).setEndian(arch.endian);
         architectures.get(i).setBits(arch.bits);
         architectures.get(i).setVariant(arch.variant);
@@ -113,7 +113,7 @@ public class DatabaseBuilder {
     private void makeSegments() throws IOException {
       var segments = currentProgram.getMemory().getBlocks();
       var loaded = Arrays.stream(segments).filter(s -> s.isLoaded()).toArray();
-      var builder = projectBuilder.initSegments(loaded.length);
+      var builder = databaseBuilder.initSegments(loaded.length);
       for (var i = 0; i < loaded.length; ++i) {
         var segment = (MemoryBlock)loaded[i];
         var space = segment.getStart().getAddressSpace();
@@ -149,16 +149,16 @@ public class DatabaseBuilder {
 
       switch (formatFull) {
         case "Executable and Linking Format (ELF)":
-          projectBuilder.setFormat("ELF");
+          databaseBuilder.setFormat("ELF");
           break;
         case "Portable Executable (PE)":
-          projectBuilder.setFormat("PE");
+          databaseBuilder.setFormat("PE");
           break;
         case "Mac OS X Mach-O":
-          projectBuilder.setFormat("Mach-O");
+          databaseBuilder.setFormat("Mach-O");
           break;
         default:
-          projectBuilder.setFormat("Raw");
+          databaseBuilder.setFormat("Raw");
       }
     }
 
@@ -172,7 +172,7 @@ public class DatabaseBuilder {
         functionMap.put(function.getID(), i++);
       }
 
-      var builder = projectBuilder.initFunctions(i);
+      var builder = databaseBuilder.initFunctions(i);
       for (var function : functionManager.getFunctions(true)) {
         var myId = functionMap.get(function.getID());
         var fBuilder = builder.get(myId);
@@ -272,20 +272,19 @@ public class DatabaseBuilder {
     }
 
     public void exportTo(String outputFileName) throws CancelledException, IOException {
-      projectBuilder.getExportInfo().setStartTime(startTime);
-      projectBuilder.getExportInfo().setExportTime(System.currentTimeMillis() * 1000000L);
+      databaseBuilder.getExportInfo().setStartTime(startTime);
+      databaseBuilder.getExportInfo().setExportTime(System.currentTimeMillis() * 1000000L);
       makeArchitecture(null);
 
       var meta = currentProgram.getMetadata();
-      projectBuilder.setEndian(meta.get("Endian").equals("Big"));
+      databaseBuilder.setEndian(meta.get("Endian").equals("Big"));
 
       makeExportInfo();
       makeFormat();
       makeSegments();
       makeFunctions();
       makeArchitectures();
-      projectBuilder.getExportInfo().setFinishTime(System.currentTimeMillis() * 1000000L);
-
+      databaseBuilder.getExportInfo().setFinishTime(System.currentTimeMillis() * 1000000L);
 
       org.capnproto.SerializePacked.writeToUnbuffered(
           (new java.io.FileOutputStream(outputFileName)).getChannel(),
