@@ -5,14 +5,13 @@
 import ghidra.app.script.GhidraScript;
 import ghidra.program.model.address.Address;
 import ghidra.framework.Application;
-import fugue.flirt.Flirt;
 import fugue.serialise.ArchBuilder;
 import fugue.serialise.DatabaseBuilder;
 
 import java.io.File;
 import java.util.Optional;
 
-public class fugueNDBExport extends GhidraScript {
+public class FugueExport extends GhidraScript {
   private static final String FUGUE_OPT_OUTPUT = "FugueOutput:";
   private static final String FUGUE_OPT_OVERWRITE = "FugueForceOverwrite:";
 
@@ -38,7 +37,7 @@ public class fugueNDBExport extends GhidraScript {
         System.exit(102); // import error
       }
 
-      if (!overwriteNDB && (new File(fileName)).exists()) {
+      if (!overwrite && (new File(fileName)).exists()) {
         System.exit(100); // already exists
       }
     } else {

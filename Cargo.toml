@@ -1,0 +1,15 @@
+[package]
+name = "fugue-ghidra"
+version = "0.1.0"
+authors = ["Sam Thomas <st@xv.ax>"]
+edition = "2018"
+
+[lib]
+path = "rust/lib.rs"
+
+[dependencies]
+fugue-db = { git = "ssh://git@git.simulacra.to:10022/fugue/fugue-core" }
+thiserror = "1"
+tempfile = "3"
+which = "4"
+url = "2.2"
