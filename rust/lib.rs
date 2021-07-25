@@ -1,5 +1,7 @@
 use std::env;
+use std::io::{Read, Write};
 use std::ffi::OsString;
+use std::fs::File;
 use std::path::{Path, PathBuf};
 use std::process;
 
@@ -29,6 +31,8 @@ pub enum Error {
     Unsupported,
     #[error("Ghidra encountered a generic failure")]
     Failure,
+    #[error("could not fix ownership on project file: {0}")]
+    Ownership(#[source] std::io::Error),
     #[error("could not create temporary directory for export: {0}")]
     TempDirectory(#[source] std::io::Error),
     #[error("`{0}` is not a supported URL scheme")]
@@ -48,9 +52,55 @@ pub struct GhidraProject {
     project_name: OsString,
     project_path: PathBuf,
     project_file: PathBuf,
+    previous_prp: Vec<u8>,
+}
+
+macro_rules! PRP_TEMPLATE {
+    () => {
+        r#"<?xml version="1.0" encoding="UTF-8"?>
+<FILE_INFO>
+    <BASIC_INFO>
+        <STATE NAME="OWNER" TYPE="string" VALUE="{}" />
+    </BASIC_INFO>
+</FILE_INFO>"#
+    };
 }
 
 impl GhidraProject {
+    fn toggle_ownership(&mut self, restore: bool) -> Result<(), Error> {
+        let prp_path = self.project_path.join("project.prp");
+        if !prp_path.exists() {
+            return Ok(())
+        }
+
+        let old_prp = {
+            let mut prp = File::open(&prp_path).map_err(Error::Ownership)?;
+            let mut buf = Vec::new();
+            prp.read_to_end(&mut buf).map_err(Error::Ownership)?;
+            buf
+        };
+
+        let mut prp = File::create(&prp_path).map_err(Error::Ownership)?;
+
+        if restore {
+            prp.write_all(&self.previous_prp)
+        } else {
+            self.previous_prp = old_prp;
+            write!(prp, PRP_TEMPLATE!(), whoami::username())
+        }
+        .map_err(Error::Ownership)?;
+
+        Ok(())
+    }
+
+    pub fn modify_ownership(&mut self) -> Result<(), Error> {
+        self.toggle_ownership(false)
+    }
+
+    pub fn restore_ownership(&mut self) -> Result<(), Error> {
+        self.toggle_ownership(true)
+    }
+
     pub fn resolve<P: AsRef<Path>>(path: P) -> Option<Self> {
         let path = path.as_ref();
 
@@ -90,6 +140,7 @@ impl GhidraProject {
                     project_name: rep_path.file_stem()?.to_owned(),
                     project_path: rep_path,
                     project_file: path.strip_prefix(project_path).ok()?.to_owned(),
+                    previous_prp: Vec::default(),
                 });
             }
 
@@ -100,19 +151,6 @@ impl GhidraProject {
         }
         None
     }
-
-    pub fn parts(&self) -> (&Path, &Path) {
-        (&self.project_path, &self.project_file)
-    }
-
-    /*
-    pub fn project(&self) -> Project {
-        Project::new(
-            Local::new(&self.project_root, self.project_name.to_string_lossy()),
-            Process::file(&self.project_file),
-        )
-    }
-    */
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -120,6 +158,7 @@ pub struct Ghidra {
     path: Option<PathBuf>,
     fdb_path: Option<PathBuf>,
     overwrite: bool,
+    fix_ownership: bool,
 }
 
 impl Default for Ghidra {
@@ -128,6 +167,7 @@ impl Default for Ghidra {
             path: None,
             fdb_path: None,
             overwrite: false,
+            fix_ownership: false,
         }
     }
 }
@@ -163,12 +203,17 @@ impl Ghidra {
         })
         .map_err(ExportError::from)?;
 
-        Ok(Self { path: Some(path), fdb_path: None, overwrite: false })
+        Ok(Self { path: Some(path), ..Default::default() })
     }
 
     pub fn export_path<P: AsRef<Path>>(mut self, path: P, overwrite: bool) -> Self {
         self.fdb_path = Some(path.as_ref().to_owned());
         self.overwrite = overwrite;
+        self
+    }
+
+    pub fn force_ownership(mut self, force: bool) -> Self {
+        self.fix_ownership = force;
         self
     }
 }
@@ -207,7 +252,9 @@ impl Backend for Ghidra {
         let headless = self.path.as_ref().ok_or_else(|| Error::NotAvailable)?;
         let mut process = process::Command::new(headless);
 
-        if let Some(project) = GhidraProject::resolve(&path) {
+        let mut project = GhidraProject::resolve(&path);
+
+        if let Some(ref project) = project {
             // existing
             let location = project.project_root.parent()
                 .map(|p| p.to_owned())
@@ -260,19 +307,28 @@ impl Backend for Ghidra {
             Imported::File(tmp)
         };
 
-        println!("{:?}", process);
-
-        match process
-            .output()
-            .map_err(Error::Launch)
-            .map(|output| output.status.code())?
-        {
-            Some(100) => Ok(output),
-            Some(101) => Err(Error::InputOutput),
-            Some(102) => Err(Error::Import),
-            Some(103) => Err(Error::Unsupported),
-            _ => Err(Error::Failure),
+        if self.fix_ownership {
+            if let Some(ref mut project) = project {
+                project.modify_ownership()?;
+            }
         }
+
+        let result = match process.output().map_err(Error::Launch).map(|output| output.status.code()) {
+            Ok(Some(100)) => Ok(output),
+            Ok(Some(101)) => Err(Error::InputOutput),
+            Ok(Some(102)) => Err(Error::Import),
+            Ok(Some(103)) => Err(Error::Unsupported),
+            Ok(_) => Err(Error::Failure),
+            Err(e) => Err(e),
+        };
+
+        if self.fix_ownership {
+            if let Some(ref mut project) = project {
+                project.restore_ownership()?;
+            }
+        }
+
+        result
     }
 }
 
