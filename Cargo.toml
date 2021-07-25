@@ -9,7 +9,7 @@ license = "MIT"
 path = "rust/lib.rs"
 
 [dependencies]
-fugue-db = { git = "ssh://git@git.simulacra.to:10022/fugue/fugue-core" }
+fugue-db = { version = "0.2", registry = "fugue" }
 thiserror = "1"
 tempfile = "3"
 which = "4"

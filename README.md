@@ -5,7 +5,9 @@ Ghidra extension to use FDB format in scripts
 ## Prerequisites
 
 ```
-capnp compile --src-prefix=extra -ojava:src/main/java/fugue/serialise extra/fugue_db.capnp
+git submodule sync --recursive
+git submodule update --recursive
+flatc --java -b -o src/main/java/ extra/schema/fugue.fbs
 ```
 
 ## Build
