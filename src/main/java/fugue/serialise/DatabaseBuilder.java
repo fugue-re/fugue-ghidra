@@ -16,6 +16,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import com.google.common.collect.Iterables;
+import com.google.flatbuffers.FlatBufferBuilder;
 
 import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.codec.DecoderException;
@@ -35,12 +36,11 @@ import ghidra.program.model.address.*;
 import ghidra.util.task.TaskMonitor;
 import ghidra.util.exception.CancelledException;
 
-import fugue.serialise.DatabaseImpl.Database;
+import fugue.schema.*;
 import fugue.serialise.ArchBuilder;
 
 public class DatabaseBuilder {
-    private org.capnproto.MessageBuilder message;
-    private Database.Builder databaseBuilder;
+    private FlatBufferBuilder message;
 
     private LinkedHashMap<ArchBuilder, Integer> arches;
     private HashMap<Long, Integer> functionMap;
@@ -48,56 +48,71 @@ public class DatabaseBuilder {
     private Program currentProgram;
     private TaskMonitor monitor;
 
-    public static long startTime = 0;
-
     public DatabaseBuilder(Program currentProgram, TaskMonitor monitor) {
       this.currentProgram = currentProgram;
       this.monitor = monitor;
 
-      message = new org.capnproto.MessageBuilder();
-      databaseBuilder = message.initRoot(Database.factory);
+      message = new FlatBufferBuilder();
 
       arches = new LinkedHashMap<>();
       functionMap = new HashMap<>();
     }
 
-    public static void setStartTime() {
-        startTime = System.currentTimeMillis() * 1000000L;
-    }
-
-    private void makeExportInfo() {
+    private int makeMetadata() {
       var meta = currentProgram.getMetadata();
-      var exportInfo = databaseBuilder.getExportInfo();
 
-      exportInfo.setInputPath(meta.get("Executable Location"));
+      int inputMd5 = 0;
+      int inputSha256 = 0;
 
       try {
         byte[] sha256bytes = Hex.decodeHex(meta.get("Executable SHA256").toCharArray());
-        exportInfo.setInputSha256(sha256bytes);
+        inputSha256 = Metadata.createInputSha256Vector(message, sha256bytes);
       } catch (DecoderException ex) {
         ex.printStackTrace();
       }
 
       try {
         byte[] md5bytes = Hex.decodeHex(meta.get("Executable MD5").toCharArray());
-        exportInfo.setInputMd5(md5bytes);
+        inputMd5 = Metadata.createInputMd5Vector(message, md5bytes);
       } catch (DecoderException ex) {
         ex.printStackTrace();
       }
 
-      var fileSize = meta.get("# of Bytes");
-      exportInfo.setFileSize(Long.parseUnsignedLong(fileSize));
-      exportInfo.setExporter("Ghidra v" + meta.get("Created With Ghidra Version"));
+      var inputPath = message.createString(meta.get("Executable Location"));
+      var inputFormat = message.createString(makeFormat());
+      var inputSize = Long.parseUnsignedLong(meta.get("# of Bytes"));
+      var exporter = message.createString("Ghidra v" + meta.get("Created With Ghidra Version"));
+      var auxiliary = Metadata.createAuxiliaryVector(message, new byte[0]);
+
+      return Metadata.createMetadata(
+          message,
+          inputFormat,
+          inputPath,
+          inputMd5,
+          inputSha256,
+          inputSize,
+          exporter,
+          auxiliary
+      );
     }
 
-    private void makeArchitectures() {
-      var architectures = databaseBuilder.initArchitectures(arches.size());
+    private int makeArchitectures() {
+      var architectures = new int[arches.size()];
       arches.forEach((arch, i) -> {
-        architectures.get(i).setProcessor(arch.processor);
-        architectures.get(i).setEndian(arch.endian);
-        architectures.get(i).setBits(arch.bits);
-        architectures.get(i).setVariant(arch.variant);
+        var processor = message.createString(arch.processor);
+        var variant = message.createString(arch.variant);
+        var auxiliary = Architecture.createAuxiliaryVector(message, new byte[0]);
+
+        architectures[i] = Architecture.createArchitecture(
+            message,
+            processor,
+            arch.endian,
+            arch.bits,
+            variant,
+            auxiliary
+        );
       });
+      return Project.createArchitecturesVector(message, architectures);
     }
 
     private int makeArchitecture(Address address) {
@@ -110,59 +125,65 @@ public class DatabaseBuilder {
       return index;
     }
 
-    private void makeSegments() throws IOException {
+    private int makeSegments() throws IOException {
       var segments = currentProgram.getMemory().getBlocks();
       var loaded = Arrays.stream(segments).filter(s -> s.isLoaded()).toArray();
-      var builder = databaseBuilder.initSegments(loaded.length);
+
+      var segmentVector = new int[loaded.length];
+      var ldef = currentProgram.getLanguage().getLanguageDescription();
+
       for (var i = 0; i < loaded.length; ++i) {
         var segment = (MemoryBlock)loaded[i];
         var space = segment.getStart().getAddressSpace();
-        var segmentBuilder = builder.get(i);
 
-        segmentBuilder.setName(segment.getName());
-
-        segmentBuilder.setAddress(segment.getStart().getUnsignedOffset());
-        segmentBuilder.setLength((int)segment.getSize());
-        segmentBuilder.setAddressSize(space.getPointerSize());
-        segmentBuilder.setAlignment(space.getAddressableUnitSize());
-
-        segmentBuilder.setCode(segment.isExecute());
-        segmentBuilder.setData(!segment.isExecute());
-
-        segmentBuilder.setExternal(segment.getName().equals(MemoryBlock.EXTERNAL_BLOCK_NAME));
-        segmentBuilder.setExecutable(segment.isExecute());
-        segmentBuilder.setReadable(segment.isRead());
-        segmentBuilder.setWritable(segment.isWrite());
-
+        var segmentName = message.createString(segment.getName());
         var segmentData = segment.getData();
-        if (segmentData != null) {
-          segmentBuilder.setContent(segmentData.readAllBytes());
-        } else {
-          segmentBuilder.initContent(0);
-        }
+        var segmentBytes = Segment.createBytesVector(
+            message,
+            (segmentData != null) ? segmentData.readAllBytes() : new byte[0]
+        );
+        var auxiliary = Segment.createAuxiliaryVector(message, new byte[0]);
+
+        segmentVector[i] = Segment.createSegment(
+            message,
+            segmentName,
+            segment.getStart().getUnsignedOffset(),
+            segment.getSize(),
+            space.getPointerSize(),
+            space.getAddressableUnitSize(),
+            space.getPointerSize() * 8, // should be the same as bits?
+            (segment.isExecute() ? ldef.getInstructionEndian() : ldef.getEndian()).isBigEndian(),
+            segment.isExecute(),
+            !segment.isExecute(),
+            segment.getName().equals(MemoryBlock.EXTERNAL_BLOCK_NAME),
+            segment.isRead(),
+            segment.isWrite(),
+            segment.isExecute(),
+            segmentBytes,
+            auxiliary
+        );
       }
+
+      return Project.createSegmentsVector(message, segmentVector);
     }
 
-    private void makeFormat() {
+    private String makeFormat() {
       var meta = currentProgram.getMetadata();
       var formatFull = meta.get("Executable Format");
 
       switch (formatFull) {
         case "Executable and Linking Format (ELF)":
-          databaseBuilder.setFormat("ELF");
-          break;
+          return "ELF";
         case "Portable Executable (PE)":
-          databaseBuilder.setFormat("PE");
-          break;
+          return "PE";
         case "Mac OS X Mach-O":
-          databaseBuilder.setFormat("Mach-O");
-          break;
+          return "Mach-O";
         default:
-          databaseBuilder.setFormat("Raw");
+          return "Raw";
       }
     }
 
-    private void makeFunctions() throws CancelledException {
+    private int makeFunctions() throws CancelledException {
       var blockModel = new BasicBlockModel(currentProgram, true);
       var functionManager = currentProgram.getFunctionManager();
       var referenceManager = currentProgram.getReferenceManager();
@@ -172,13 +193,10 @@ public class DatabaseBuilder {
         functionMap.put(function.getID(), i++);
       }
 
-      var builder = databaseBuilder.initFunctions(i);
+      var functions = new int[i];
+
       for (var function : functionManager.getFunctions(true)) {
         var myId = functionMap.get(function.getID());
-        var fBuilder = builder.get(myId);
-
-        fBuilder.setSymbol(function.getName());
-        fBuilder.setAddress(function.getEntryPoint().getUnsignedOffset());
 
         var incoming = Iterables.toArray(
             Iterables.filter(
@@ -186,17 +204,25 @@ public class DatabaseBuilder {
               ref -> ref.getReferenceType().isCall() && functionManager.getFunctionContaining(ref.getFromAddress()) != null
             ),
             Reference.class);
-        var refsBuilder = fBuilder.initReferences(incoming.length);
+
+        var referencesVector = new int[incoming.length];
 
         i = 0;
         for (var caller : incoming) {
           var callingFunction = functionManager.getFunctionContaining(caller.getFromAddress());
           var id = functionMap.get(callingFunction.getID());
-          var refBuilder = refsBuilder.get(i);
-          refBuilder.setAddress(caller.getFromAddress().getUnsignedOffset());
-          refBuilder.setSource(id);
-          refBuilder.setTarget(myId);
-          refBuilder.setCall(true);
+
+          var auxiliary = InterRef.createAuxiliaryVector(message, new byte[0]);
+
+          referencesVector[i] = InterRef.createInterRef(
+              message,
+              caller.getFromAddress().getUnsignedOffset(),
+              id,
+              myId,
+              true,
+              auxiliary
+          );
+
           ++i;
         }
 
@@ -207,7 +233,6 @@ public class DatabaseBuilder {
         }
 
         var blockCount = blocks.size();
-        var blockBuilder = fBuilder.initBlocks(blockCount);
         var blockMap = new HashMap<Address, Integer>();
         i = 0;
         for (var block : blocks) {
@@ -215,20 +240,20 @@ public class DatabaseBuilder {
           blockMap.put(start, i++);
         }
 
+        var blocksVector = new int[blockCount];
+        var entry = 0L;
+
         for (var block : blocks) {
           i = blockMap.get(block.getMinAddress());
           var blockId = ((long)myId << 32L) | (long)i;
-          var bBuilder = blockBuilder.get(i);
 
           var start = block.getMinAddress();
           if (start.equals(function.getEntryPoint())) {
-            fBuilder.setEntry((long)myId << 32L | (long)i);
+            entry = (long)myId << 32L | (long)i;
           }
-          var end = block.getMaxAddress();
 
-          bBuilder.setAddress(start.getUnsignedOffset());
-          bBuilder.setLength((int)(end.subtract(start)+1));
-          bBuilder.setArchitecture(makeArchitecture(start));
+          var end = block.getMaxAddress();
+          var arch = makeArchitecture(start);
 
           var preds = new ArrayList<CodeBlockReference>();
           var predsIter = block.getSources(monitor);
@@ -239,13 +264,20 @@ public class DatabaseBuilder {
             }
           }
           var predCount = preds.size();
-          var predsBuilder = bBuilder.initPredecessors(predCount);
+          var predsVector = new int[predCount];
           i = 0;
           for (var pred : preds) {
             var predId = (long)myId << 32L | (long)blockMap.get(pred.getSourceAddress());
-            predsBuilder.get(i).setSource(predId);
-            predsBuilder.get(i).setTarget(blockId);
-            predsBuilder.get(i).setFunction(myId);
+            var auxiliary = IntraRef.createAuxiliaryVector(message, new byte[0]);
+
+            predsVector[i] = IntraRef.createIntraRef(
+                message,
+                predId,
+                blockId,
+                myId,
+                auxiliary
+            );
+
             ++i;
           }
 
@@ -258,36 +290,83 @@ public class DatabaseBuilder {
             }
           }
           var succCount = succs.size();
-          var succsBuilder = bBuilder.initSuccessors(succCount);
+          var succsVector = new int[succCount];
           i = 0;
           for (var succ : succs) {
             var succId = (long)myId << 32L | (long)blockMap.get(succ.getDestinationAddress());
-            succsBuilder.get(i).setSource(blockId);
-            succsBuilder.get(i).setTarget(succId);
-            succsBuilder.get(i).setFunction(myId);
+            var auxiliary = IntraRef.createAuxiliaryVector(message, new byte[0]);
+
+            succsVector[i] = IntraRef.createIntraRef(
+                message,
+                blockId,
+                succId,
+                myId,
+                auxiliary
+            );
+
             ++i;
           }
+
+          var predsV = BasicBlock.createPredecessorsVector(message, predsVector);
+          var succsV = BasicBlock.createSuccessorsVector(message, succsVector);
+
+          var auxiliary = BasicBlock.createAuxiliaryVector(message, new byte[0]);
+
+          blocksVector[i] = BasicBlock.createBasicBlock(
+              message,
+              start.getUnsignedOffset(),
+              end.subtract(start) + 1,
+              arch,
+              predsV,
+              succsV,
+              auxiliary
+          );
         }
+
+        var symbol = message.createString(function.getName());
+        var blocksV = fugue.schema.Function.createBlocksVector(message, blocksVector);
+        var references = fugue.schema.Function.createReferencesVector(message, referencesVector);
+        var auxiliary = fugue.schema.Function.createAuxiliaryVector(message, new byte[0]);
+
+        functions[myId] = fugue.schema.Function.createFunction(
+            message,
+            symbol,
+            function.getEntryPoint().getUnsignedOffset(),
+            entry,
+            blocksV,
+            references,
+            auxiliary
+        );
       }
+      return Project.createFunctionsVector(message, functions);
     }
 
     public void exportTo(String outputFileName) throws CancelledException, IOException {
-      databaseBuilder.getExportInfo().setStartTime(startTime);
-      databaseBuilder.getExportInfo().setExportTime(System.currentTimeMillis() * 1000000L);
       makeArchitecture(null);
 
-      var meta = currentProgram.getMetadata();
-      databaseBuilder.setEndian(meta.get("Endian").equals("Big"));
+      var metadata = makeMetadata();
+      var segments = makeSegments();
+      var functions = makeFunctions();
+      var architectures = makeArchitectures();
+      var auxiliary = Project.createAuxiliaryVector(message, new byte[0]);
 
-      makeExportInfo();
-      makeFormat();
-      makeSegments();
-      makeFunctions();
-      makeArchitectures();
-      databaseBuilder.getExportInfo().setFinishTime(System.currentTimeMillis() * 1000000L);
+      var project = Project.createProject(
+          message,
+          architectures,
+          segments,
+          functions,
+          metadata,
+          auxiliary
+      );
 
-      org.capnproto.SerializePacked.writeToUnbuffered(
-          (new java.io.FileOutputStream(outputFileName)).getChannel(),
-          message);
+      Project.finishProjectBuffer(message, project);
+
+      var output = new java.io.FileOutputStream(outputFileName);
+      var channel = output.getChannel();
+
+      channel.write(message.dataBuffer());
+
+      channel.close();
+      output.close();
     }
 }

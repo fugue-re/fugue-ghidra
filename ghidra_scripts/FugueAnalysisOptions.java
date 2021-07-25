@@ -15,7 +15,5 @@ public class FugueAnalysisOptions extends GhidraScript {
         if (options.containsKey(CREATE_ADDRESS_TABLES)) {
             setAnalysisOption(currentProgram, CREATE_ADDRESS_TABLES, "false");
         }
-
-        DatabaseBuilder.setStartTime();
     }
 }

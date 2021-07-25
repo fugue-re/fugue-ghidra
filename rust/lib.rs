@@ -104,15 +104,6 @@ impl GhidraProject {
     pub fn parts(&self) -> (&Path, &Path) {
         (&self.project_path, &self.project_file)
     }
-
-    /*
-    pub fn project(&self) -> Project {
-        Project::new(
-            Local::new(&self.project_root, self.project_name.to_string_lossy()),
-            Process::file(&self.project_file),
-        )
-    }
-    */
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -259,8 +250,6 @@ impl Backend for Ghidra {
             process.arg(format!("FugueOutput:{}", tmp.display()));
             Imported::File(tmp)
         };
-
-        println!("{:?}", process);
 
         match process
             .output()
