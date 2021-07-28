@@ -29,7 +29,7 @@ jobs:
     - name: build with Gradle
       run: ./gradlew buildExtension
       env:
-        GHIDRA_INSTALL_DIR: ./ghidra_10.0.1_PUBLIC
+        GHIDRA_INSTALL_DIR: ${{ env.GITHUB_WORKSPACE }}/ghidra_10.0.1_PUBLIC
         
     - name: exporting artefacts
       uses: actions/upload-artifact@v2
