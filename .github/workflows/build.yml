@@ -29,11 +29,11 @@ jobs:
     - name: build with Gradle
       run: ./gradlew buildExtension
       env:
-        GHIDRA_INSTALL_DIR: ${{ env.GITHUB_WORKSPACE }}/ghidra_10.0.1_PUBLIC
+        GHIDRA_INSTALL_DIR: ${{ github.workspace }}/ghidra_10.0.1_PUBLIC
         
     - name: exporting artefacts
       uses: actions/upload-artifact@v2
       with:
         name: fugue-ghidra-plugin
         path: |
-          dist/*_fugue-ghidra.zip
+          ${{ github.workspace }}/dist/*_fugue-ghidra.zip
