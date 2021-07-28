@@ -1,0 +1,39 @@
+name: build
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: set up JDK 11
+      uses: actions/setup-java@v2
+      with:
+        java-version: '11'
+        distribution: 'adopt'
+        
+    - name: fetch Ghidra
+      run: |
+        wget https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_10.0.1_build/ghidra_10.0.1_PUBLIC_20210708.zip
+        unzip ghidra_10.0.1_PUBLIC_20210708.zip
+        
+    - name: grant execute permission for gradlew
+      run: chmod +x gradlew
+      
+    - name: build with Gradle
+      run: ./gradlew buildExtension
+      env: |
+        GHIDRA_INSTALL_DIR: ./ghidra_10.0.1_PUBLIC
+        
+    - name: exporting artefacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: fugue-ghidra-plugin
+        path: |
+          dist/*_fugue-ghidra.zip
