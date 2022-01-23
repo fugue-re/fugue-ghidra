@@ -1,0 +1,8 @@
+/.gradle
+/.project
+/.settings
+/build
+/dist
+/lib
+/target
+Cargo.lock

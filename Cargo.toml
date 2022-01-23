@@ -1,0 +1,17 @@
+[package]
+name = "fugue-ghidra"
+version = "0.2.0"
+authors = ["Sam Thomas <st@xv.ax>"]
+edition = "2018"
+license = "MIT"
+
+[lib]
+path = "rust/lib.rs"
+
+[dependencies]
+fugue-db = { version = "0.2", registry = "fugue" }
+thiserror = "1"
+tempfile = "3"
+which = "4"
+whoami = "1"
+url = "2.2"
