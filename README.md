@@ -13,6 +13,9 @@ Run the following commands:
 ```
 git submodule init
 git submodule update --recursive
+
+# make sure that the flatc version is the same
+# as the flatbuffers-java version in build.gradle
 flatc --java -b -o src/main/java/ extra/schema/fugue.fbs
 ```
 

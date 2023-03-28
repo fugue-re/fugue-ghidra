@@ -2,14 +2,26 @@
 
 package fugue.schema;
 
-import java.nio.*;
-import java.lang.*;
-import java.util.*;
-import com.google.flatbuffers.*;
+import com.google.flatbuffers.BaseVector;
+import com.google.flatbuffers.BooleanVector;
+import com.google.flatbuffers.ByteVector;
+import com.google.flatbuffers.Constants;
+import com.google.flatbuffers.DoubleVector;
+import com.google.flatbuffers.FlatBufferBuilder;
+import com.google.flatbuffers.FloatVector;
+import com.google.flatbuffers.IntVector;
+import com.google.flatbuffers.LongVector;
+import com.google.flatbuffers.ShortVector;
+import com.google.flatbuffers.StringVector;
+import com.google.flatbuffers.Struct;
+import com.google.flatbuffers.Table;
+import com.google.flatbuffers.UnionVector;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
 @SuppressWarnings("unused")
 public final class Metadata extends Table {
-  public static void ValidateVersion() { Constants.FLATBUFFERS_2_0_0(); }
+  public static void ValidateVersion() { Constants.FLATBUFFERS_23_3_3(); }
   public static Metadata getRootAsMetadata(ByteBuffer _bb) { return getRootAsMetadata(_bb, new Metadata()); }
   public static Metadata getRootAsMetadata(ByteBuffer _bb, Metadata obj) { _bb.order(ByteOrder.LITTLE_ENDIAN); return (obj.__assign(_bb.getInt(_bb.position()) + _bb.position(), _bb)); }
   public void __init(int _i, ByteBuffer _bb) { __reset(_i, _bb); }
@@ -45,21 +57,21 @@ public final class Metadata extends Table {
   public ByteBuffer auxiliaryInByteBuffer(ByteBuffer _bb) { return __vector_in_bytebuffer(_bb, 16, 1); }
 
   public static int createMetadata(FlatBufferBuilder builder,
-      int input_formatOffset,
-      int input_pathOffset,
-      int input_md5Offset,
-      int input_sha256Offset,
-      long input_size,
+      int inputFormatOffset,
+      int inputPathOffset,
+      int inputMd5Offset,
+      int inputSha256Offset,
+      long inputSize,
       int exporterOffset,
       int auxiliaryOffset) {
     builder.startTable(7);
     Metadata.addAuxiliary(builder, auxiliaryOffset);
     Metadata.addExporter(builder, exporterOffset);
-    Metadata.addInputSize(builder, input_size);
-    Metadata.addInputSha256(builder, input_sha256Offset);
-    Metadata.addInputMd5(builder, input_md5Offset);
-    Metadata.addInputPath(builder, input_pathOffset);
-    Metadata.addInputFormat(builder, input_formatOffset);
+    Metadata.addInputSize(builder, inputSize);
+    Metadata.addInputSha256(builder, inputSha256Offset);
+    Metadata.addInputMd5(builder, inputMd5Offset);
+    Metadata.addInputPath(builder, inputPathOffset);
+    Metadata.addInputFormat(builder, inputFormatOffset);
     return Metadata.endMetadata(builder);
   }
 
@@ -74,7 +86,7 @@ public final class Metadata extends Table {
   public static int createInputSha256Vector(FlatBufferBuilder builder, byte[] data) { return builder.createByteVector(data); }
   public static int createInputSha256Vector(FlatBufferBuilder builder, ByteBuffer data) { return builder.createByteVector(data); }
   public static void startInputSha256Vector(FlatBufferBuilder builder, int numElems) { builder.startVector(1, numElems, 1); }
-  public static void addInputSize(FlatBufferBuilder builder, long inputSize) { builder.addInt(4, (int)inputSize, (int)0L); }
+  public static void addInputSize(FlatBufferBuilder builder, long inputSize) { builder.addInt(4, (int) inputSize, (int) 0L); }
   public static void addExporter(FlatBufferBuilder builder, int exporterOffset) { builder.addOffset(5, exporterOffset, 0); }
   public static void addAuxiliary(FlatBufferBuilder builder, int auxiliaryOffset) { builder.addOffset(6, auxiliaryOffset, 0); }
   public static int createAuxiliaryVector(FlatBufferBuilder builder, byte[] data) { return builder.createByteVector(data); }

@@ -2,14 +2,26 @@
 
 package fugue.schema;
 
-import java.nio.*;
-import java.lang.*;
-import java.util.*;
-import com.google.flatbuffers.*;
+import com.google.flatbuffers.BaseVector;
+import com.google.flatbuffers.BooleanVector;
+import com.google.flatbuffers.ByteVector;
+import com.google.flatbuffers.Constants;
+import com.google.flatbuffers.DoubleVector;
+import com.google.flatbuffers.FlatBufferBuilder;
+import com.google.flatbuffers.FloatVector;
+import com.google.flatbuffers.IntVector;
+import com.google.flatbuffers.LongVector;
+import com.google.flatbuffers.ShortVector;
+import com.google.flatbuffers.StringVector;
+import com.google.flatbuffers.Struct;
+import com.google.flatbuffers.Table;
+import com.google.flatbuffers.UnionVector;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
 @SuppressWarnings("unused")
 public final class IntraRef extends Table {
-  public static void ValidateVersion() { Constants.FLATBUFFERS_2_0_0(); }
+  public static void ValidateVersion() { Constants.FLATBUFFERS_23_3_3(); }
   public static IntraRef getRootAsIntraRef(ByteBuffer _bb) { return getRootAsIntraRef(_bb, new IntraRef()); }
   public static IntraRef getRootAsIntraRef(ByteBuffer _bb, IntraRef obj) { _bb.order(ByteOrder.LITTLE_ENDIAN); return (obj.__assign(_bb.getInt(_bb.position()) + _bb.position(), _bb)); }
   public void __init(int _i, ByteBuffer _bb) { __reset(_i, _bb); }
@@ -41,7 +53,7 @@ public final class IntraRef extends Table {
   public static void startIntraRef(FlatBufferBuilder builder) { builder.startTable(4); }
   public static void addSource(FlatBufferBuilder builder, long source) { builder.addLong(0, source, 0L); }
   public static void addTarget(FlatBufferBuilder builder, long target) { builder.addLong(1, target, 0L); }
-  public static void addFunction(FlatBufferBuilder builder, long function) { builder.addInt(2, (int)function, (int)0L); }
+  public static void addFunction(FlatBufferBuilder builder, long function) { builder.addInt(2, (int) function, (int) 0L); }
   public static void addAuxiliary(FlatBufferBuilder builder, int auxiliaryOffset) { builder.addOffset(3, auxiliaryOffset, 0); }
   public static int createAuxiliaryVector(FlatBufferBuilder builder, byte[] data) { return builder.createByteVector(data); }
   public static int createAuxiliaryVector(FlatBufferBuilder builder, ByteBuffer data) { return builder.createByteVector(data); }
