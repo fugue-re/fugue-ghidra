@@ -2,14 +2,26 @@
 
 package fugue.schema;
 
-import java.nio.*;
-import java.lang.*;
-import java.util.*;
-import com.google.flatbuffers.*;
+import com.google.flatbuffers.BaseVector;
+import com.google.flatbuffers.BooleanVector;
+import com.google.flatbuffers.ByteVector;
+import com.google.flatbuffers.Constants;
+import com.google.flatbuffers.DoubleVector;
+import com.google.flatbuffers.FlatBufferBuilder;
+import com.google.flatbuffers.FloatVector;
+import com.google.flatbuffers.IntVector;
+import com.google.flatbuffers.LongVector;
+import com.google.flatbuffers.ShortVector;
+import com.google.flatbuffers.StringVector;
+import com.google.flatbuffers.Struct;
+import com.google.flatbuffers.Table;
+import com.google.flatbuffers.UnionVector;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
 @SuppressWarnings("unused")
 public final class Segment extends Table {
-  public static void ValidateVersion() { Constants.FLATBUFFERS_2_0_0(); }
+  public static void ValidateVersion() { Constants.FLATBUFFERS_23_3_3(); }
   public static Segment getRootAsSegment(ByteBuffer _bb) { return getRootAsSegment(_bb, new Segment()); }
   public static Segment getRootAsSegment(ByteBuffer _bb, Segment obj) { _bb.order(ByteOrder.LITTLE_ENDIAN); return (obj.__assign(_bb.getInt(_bb.position()) + _bb.position(), _bb)); }
   public void __init(int _i, ByteBuffer _bb) { __reset(_i, _bb); }
@@ -47,7 +59,7 @@ public final class Segment extends Table {
       int nameOffset,
       long address,
       long size,
-      long address_size,
+      long addressSize,
       long alignment,
       long bits,
       boolean endian,
@@ -65,7 +77,7 @@ public final class Segment extends Table {
     Segment.addBytes(builder, bytesOffset);
     Segment.addBits(builder, bits);
     Segment.addAlignment(builder, alignment);
-    Segment.addAddressSize(builder, address_size);
+    Segment.addAddressSize(builder, addressSize);
     Segment.addSize(builder, size);
     Segment.addName(builder, nameOffset);
     Segment.addExecutable(builder, executable);
@@ -81,10 +93,10 @@ public final class Segment extends Table {
   public static void startSegment(FlatBufferBuilder builder) { builder.startTable(15); }
   public static void addName(FlatBufferBuilder builder, int nameOffset) { builder.addOffset(0, nameOffset, 0); }
   public static void addAddress(FlatBufferBuilder builder, long address) { builder.addLong(1, address, 0L); }
-  public static void addSize(FlatBufferBuilder builder, long size) { builder.addInt(2, (int)size, (int)0L); }
-  public static void addAddressSize(FlatBufferBuilder builder, long addressSize) { builder.addInt(3, (int)addressSize, (int)0L); }
-  public static void addAlignment(FlatBufferBuilder builder, long alignment) { builder.addInt(4, (int)alignment, (int)0L); }
-  public static void addBits(FlatBufferBuilder builder, long bits) { builder.addInt(5, (int)bits, (int)0L); }
+  public static void addSize(FlatBufferBuilder builder, long size) { builder.addInt(2, (int) size, (int) 0L); }
+  public static void addAddressSize(FlatBufferBuilder builder, long addressSize) { builder.addInt(3, (int) addressSize, (int) 0L); }
+  public static void addAlignment(FlatBufferBuilder builder, long alignment) { builder.addInt(4, (int) alignment, (int) 0L); }
+  public static void addBits(FlatBufferBuilder builder, long bits) { builder.addInt(5, (int) bits, (int) 0L); }
   public static void addEndian(FlatBufferBuilder builder, boolean endian) { builder.addBoolean(6, endian, false); }
   public static void addCode(FlatBufferBuilder builder, boolean code) { builder.addBoolean(7, code, false); }
   public static void addData(FlatBufferBuilder builder, boolean data) { builder.addBoolean(8, data, false); }

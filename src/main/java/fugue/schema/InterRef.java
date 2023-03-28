@@ -2,14 +2,26 @@
 
 package fugue.schema;
 
-import java.nio.*;
-import java.lang.*;
-import java.util.*;
-import com.google.flatbuffers.*;
+import com.google.flatbuffers.BaseVector;
+import com.google.flatbuffers.BooleanVector;
+import com.google.flatbuffers.ByteVector;
+import com.google.flatbuffers.Constants;
+import com.google.flatbuffers.DoubleVector;
+import com.google.flatbuffers.FlatBufferBuilder;
+import com.google.flatbuffers.FloatVector;
+import com.google.flatbuffers.IntVector;
+import com.google.flatbuffers.LongVector;
+import com.google.flatbuffers.ShortVector;
+import com.google.flatbuffers.StringVector;
+import com.google.flatbuffers.Struct;
+import com.google.flatbuffers.Table;
+import com.google.flatbuffers.UnionVector;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
 @SuppressWarnings("unused")
 public final class InterRef extends Table {
-  public static void ValidateVersion() { Constants.FLATBUFFERS_2_0_0(); }
+  public static void ValidateVersion() { Constants.FLATBUFFERS_23_3_3(); }
   public static InterRef getRootAsInterRef(ByteBuffer _bb) { return getRootAsInterRef(_bb, new InterRef()); }
   public static InterRef getRootAsInterRef(ByteBuffer _bb, InterRef obj) { _bb.order(ByteOrder.LITTLE_ENDIAN); return (obj.__assign(_bb.getInt(_bb.position()) + _bb.position(), _bb)); }
   public void __init(int _i, ByteBuffer _bb) { __reset(_i, _bb); }
@@ -43,8 +55,8 @@ public final class InterRef extends Table {
 
   public static void startInterRef(FlatBufferBuilder builder) { builder.startTable(5); }
   public static void addAddress(FlatBufferBuilder builder, long address) { builder.addLong(0, address, 0L); }
-  public static void addSource(FlatBufferBuilder builder, long source) { builder.addInt(1, (int)source, (int)4294967295L); }
-  public static void addTarget(FlatBufferBuilder builder, long target) { builder.addInt(2, (int)target, (int)0L); }
+  public static void addSource(FlatBufferBuilder builder, long source) { builder.addInt(1, (int) source, (int) 4294967295L); }
+  public static void addTarget(FlatBufferBuilder builder, long target) { builder.addInt(2, (int) target, (int) 0L); }
   public static void addCall(FlatBufferBuilder builder, boolean call) { builder.addBoolean(3, call, false); }
   public static void addAuxiliary(FlatBufferBuilder builder, int auxiliaryOffset) { builder.addOffset(4, auxiliaryOffset, 0); }
   public static int createAuxiliaryVector(FlatBufferBuilder builder, byte[] data) { return builder.createByteVector(data); }
