@@ -1,17 +1,19 @@
 [package]
 name = "fugue-ghidra"
 version = "0.2.0"
-authors = ["Sam Thomas <st@xv.ax>"]
-edition = "2018"
+authors = ["Sam Thomas <st@xv.ax>, Zitai Chen <zitaichen@outlook.com>"]
+edition = "2021"
 license = "MIT"
+description = "A binary analysis framework written in Rust"
+homepage = "https://fugue.re"
 
 [lib]
 path = "rust/lib.rs"
 
 [dependencies]
-fugue-db = { version = "0.2", registry = "fugue" }
+fugue-db = { version = "0.2" }
 thiserror = "1"
-tempfile = "3"
+tempfile = "=3.4.0" # Bug in 3.5.0, use 3.4.0 temporarily
 which = "4"
 whoami = "1"
 url = "2.2"
