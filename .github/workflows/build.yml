@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: set up JDK 11
       uses: actions/setup-java@v2
       with:
@@ -20,7 +20,7 @@ jobs:
         
     - name: fetch Ghidra
       run: |
-        wget -O ${{ runner.temp }}/ghidra.zip https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_10.1.1_build/ghidra_10.1.1_PUBLIC_20211221.zip
+        wget -O ${{ runner.temp }}/ghidra.zip https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_11.2_build/ghidra_11.2_PUBLIC_20240926.zip
         unzip -d ${{ runner.temp }} ${{ runner.temp }}/ghidra.zip
         
     - name: grant execute permission for gradlew
@@ -29,10 +29,10 @@ jobs:
     - name: build with Gradle
       run: ./gradlew buildExtension
       env:
-        GHIDRA_INSTALL_DIR: ${{ runner.temp }}/ghidra_10.1.1_PUBLIC
+        GHIDRA_INSTALL_DIR: ${{ runner.temp }}/ghidra_11.2_PUBLIC
         
     - name: exporting artefacts
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v4
       with:
         name: fugue-ghidra-plugin
         path: |
