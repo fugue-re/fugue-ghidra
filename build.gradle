@@ -25,7 +25,7 @@ repositories {
 dependencies {
     extraLibs 'com.google.guava:guava:30.1-jre'
     extraLibs 'commons-codec:commons-codec:1.15'
-    extraLibs 'com.google.flatbuffers:flatbuffers-java:23.3.3'
+    extraLibs 'com.google.flatbuffers:flatbuffers-java:24.3.25'
     configurations.implementation.extendsFrom(configurations.extraLibs)
 }
 //----------------------START "DO NOT MODIFY" SECTION------------------------------

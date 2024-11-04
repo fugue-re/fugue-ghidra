@@ -1,6 +1,6 @@
 # Fugue FDB exporter
 
-- Supports Ghidra 10.x.y.
+- Supports Ghidra 11.x.y.
 - Exports both Ghidra projects and binaries supported by Ghidra's loaders.
 - GUI-based export plugin via `Script Manager -> External -> FugueExport.java`
 
